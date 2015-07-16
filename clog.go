@@ -30,6 +30,32 @@ func (c *CircularLog) sumFails() int64 {
 	return sum(c.fails)
 }
 
+func (c *CircularLog) sumSuccesses() int64 {
+	return sum(c.successes)
+}
+
+func (c *CircularLog) Total() int64 {
+	return c.sumFails() + c.sumSuccesses()
+}
+
 func (c *CircularLog) Percent() float64 {
-	return 0.0
+	t := c.Total()
+	if t == 0 {
+		return 0.0
+	}
+	return float64(c.sumFails()) / float64(t)
+}
+
+func (c *CircularLog) Advance() {
+	c.head = (c.head + 1) % c.size
+	c.successes[c.head] = 0
+	c.fails[c.head] = 0
+}
+
+func (c *CircularLog) Success() {
+	c.successes[c.head] += 1
+}
+
+func (c *CircularLog) Fail() {
+	c.fails[c.head] += 1
 }
