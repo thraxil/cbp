@@ -16,6 +16,7 @@ type CircularLog struct {
 	percentChan chan *percentOp
 }
 
+// NewCircularLog constructs a new CircularLog and initializes it
 func NewCircularLog(size int64) *CircularLog {
 	// go always initializes to zero value
 	fails := make([]int64, size)
@@ -90,6 +91,8 @@ func (c *CircularLog) sumSuccesses() int64 {
 	return sum(c.successes)
 }
 
+// Total returns the total number of requests logged
+// successes and failures
 func (c *CircularLog) Total() int64 {
 	r := make(chan readResp)
 	c.totalChan <- &totalOp{r}
@@ -100,6 +103,10 @@ func (c *CircularLog) total() int64 {
 	return c.sumFails() + c.sumSuccesses()
 }
 
+// Percent returns the percentage of failures in the log
+// essentially fails/total.
+// If there are no entries at all, it return 0.0 rather
+// than dividing by zero.
 func (c *CircularLog) Percent() float64 {
 	r := make(chan readResp)
 	c.percentChan <- &percentOp{r}
@@ -114,6 +121,9 @@ func (c *CircularLog) percent() float64 {
 	return float64(c.sumFails()) / float64(t)
 }
 
+// Advance moves to the next time segment
+// It advances the "write head" to the next cell (wrapping around)
+// and zeroes out the cell that it now points to.
 func (c *CircularLog) Advance() {
 	wait := make(chan waitResp)
 	c.advanceChan <- &advanceOp{wait}
@@ -126,6 +136,7 @@ func (c *CircularLog) advance() {
 	c.fails[c.head] = 0
 }
 
+// Success logs a success to the current cell
 func (c *CircularLog) Success() {
 	wait := make(chan waitResp)
 	c.successChan <- &successOp{wait}
@@ -136,6 +147,7 @@ func (c *CircularLog) success() {
 	c.successes[c.head] += 1
 }
 
+// Fail logs a failure to the current cell
 func (c *CircularLog) Fail() {
 	wait := make(chan waitResp)
 	c.failChan <- &failOp{wait}
