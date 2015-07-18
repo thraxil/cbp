@@ -39,7 +39,7 @@ func (c *CircularLog) Total() int64 {
 }
 
 func (c *CircularLog) Percent() float64 {
-	t := c.Total()
+	t := c.sumFails() + c.sumSuccesses()
 	if t == 0 {
 		return 0.0
 	}
