@@ -38,7 +38,7 @@ func TestFail(t *testing.T) {
 	c.Fail()
 	// 100% failure rate now
 	if c.Percent() < 1.0 {
-		t.Error("should be a 100% failure rate")
+		t.Error("should be a 100%% failure rate")
 	}
 }
 
