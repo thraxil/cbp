@@ -14,7 +14,7 @@ var remoteAddr = flag.String("r", "localhost:80", "remote address")
 var threshold = flag.Float64("t", 0.5, "error threshold for tripping")
 var minSamples = flag.Int64("ms", 5, "minimum samples")
 
-func Proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
+func proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 	srvConn, err := net.DialTCP("tcp", nil, rAddr)
 	if err != nil {
 		cliConn.Close()
@@ -61,7 +61,7 @@ func broker(dst, src net.Conn, srcClosed chan struct{}) {
 func handleConn(in <-chan *net.TCPConn, out chan<- *net.TCPConn, rAddr *net.TCPAddr, cb *circuit.Breaker) {
 	for conn := range in {
 		cb.Call(func() error {
-			return Proxy(conn, rAddr)
+			return proxy(conn, rAddr)
 		}, 0)
 	}
 }
