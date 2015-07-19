@@ -11,6 +11,7 @@ import (
 
 var localAddr *string = flag.String("l", "localhost:9999", "local address")
 var remoteAddr *string = flag.String("r", "localhost:80", "remote address")
+var threshold *float64 = flag.Float64("t", 0.5, "error threshold for tripping")
 
 func Proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 	srvConn, err := net.DialTCP("tcp", nil, rAddr)
@@ -84,7 +85,7 @@ func main() {
 		panic(err)
 	}
 
-	cb := circuit.NewRateBreaker(0.95, 5)
+	cb := circuit.NewRateBreaker(*threshold, 5)
 	events := cb.Subscribe()
 
 	go func() {
