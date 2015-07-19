@@ -9,3 +9,4 @@ test: *.go
 
 install_deps:
 	go get github.com/cenkalti/backoff
+	go get github.com/rubyist/circuitbreaker

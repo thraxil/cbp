@@ -5,20 +5,20 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/rubyist/circuitbreaker"
 )
 
 var localAddr *string = flag.String("l", "localhost:9999", "local address")
 var remoteAddr *string = flag.String("r", "localhost:80", "remote address")
 
-func Proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) {
-	log.Println("new connection")
+func Proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 	srvConn, err := net.DialTCP("tcp", nil, rAddr)
 	if err != nil {
-		log.Println("dial failed")
 		cliConn.Close()
-		return
+		return err
 	}
-	log.Println("dial succeeded")
+	log.Println("ok")
 	defer srvConn.Close()
 
 	// channels to wait on the close event for each connection
@@ -41,7 +41,7 @@ func Proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) {
 	}
 
 	<-waitFor
-	log.Println("closed")
+	return nil
 }
 
 func broker(dst, src net.Conn, srcClosed chan struct{}) {
@@ -56,9 +56,11 @@ func broker(dst, src net.Conn, srcClosed chan struct{}) {
 	srcClosed <- struct{}{}
 }
 
-func handleConn(in <-chan *net.TCPConn, out chan<- *net.TCPConn, rAddr *net.TCPAddr) {
+func handleConn(in <-chan *net.TCPConn, out chan<- *net.TCPConn, rAddr *net.TCPAddr, cb *circuit.Breaker) {
 	for conn := range in {
-		Proxy(conn, rAddr)
+		cb.Call(func() error {
+			return Proxy(conn, rAddr)
+		}, 0)
 	}
 }
 
@@ -82,6 +84,25 @@ func main() {
 		panic(err)
 	}
 
+	cb := circuit.NewRateBreaker(0.95, 5)
+	events := cb.Subscribe()
+
+	go func() {
+		for {
+			e := <-events
+			switch e {
+			case circuit.BreakerTripped:
+				log.Println("breaker tripped")
+			case circuit.BreakerReset:
+				log.Println("breaker reset")
+			case circuit.BreakerFail:
+				log.Println("breaker fail")
+			case circuit.BreakerReady:
+				log.Println("breaker ready")
+			}
+		}
+	}()
+
 	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		panic(err)
@@ -90,7 +111,7 @@ func main() {
 	pending, complete := make(chan *net.TCPConn), make(chan *net.TCPConn)
 
 	for i := 0; i < 5; i++ {
-		go handleConn(pending, complete, rAddr)
+		go handleConn(pending, complete, rAddr, cb)
 	}
 	go closeConn(complete)
 
