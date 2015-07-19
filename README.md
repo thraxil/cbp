@@ -47,6 +47,12 @@ the remote address, it will fail immediately.
 `-ms` - minimum number of samples. Defaults to 5. Fewer samples than
         this in the total window and it won't trip.
 
+## Future Plans
+
+* configurable sliding window
+* expose circuit breaker statistics via HTTP endpoint and/or statsd
+* HTTP endpoint to force open/closed
+
 ## LICENSE
 
 BSD
