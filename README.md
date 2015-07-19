@@ -42,19 +42,7 @@ for 2 seconds, 4 seconds, 8 seconds, etc.
 `-r` - [required] remote address:port to proxy to. if it can't resolve
 the remote address, it will fail immediately.
 
-`-t` - [required] failure threshold as percentage of total requests.
+`-t` - failure threshold. Defaults to 0.5
 
-`-w` - window size. How many units of time to average over. Defaults
-to 60.
-
-`-i` - unit of time for window, in milliseconds. defaults to 1000 (so
-the default system granularity is 60 1-second buckets)
-
-`-bmin` - exponential backoff minimum time in milliseconds. defaults
-to 1000.
-
-`-bmax` - exponential backoff maximum time in milliseconds. defaults
-to 60000.
-
-`-recovery` - recovery window (where it waits to see if there are more
-errors)
+`-ms` - minimum number of samples. Defaults to 5. Fewer samples than
+        this in the total window and it won't trip.
