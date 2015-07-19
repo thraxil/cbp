@@ -84,11 +84,11 @@ func main() {
 
 	addr, err := net.ResolveTCPAddr("tcp", *localAddr)
 	if err != nil {
-		panic(err)
+		log.Fatal("cannot resolve local address: ", err)
 	}
 	rAddr, err := net.ResolveTCPAddr("tcp", *remoteAddr)
 	if err != nil {
-		panic(err)
+		log.Fatal("cannot resolve remote address: ", err)
 	}
 
 	cb := circuit.NewRateBreaker(*threshold, *minSamples)
@@ -114,7 +114,7 @@ func main() {
 
 	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		panic(err)
+		log.Fatal("cannot bind to local port: ", err)
 	}
 
 	pending, complete := make(chan *net.TCPConn), make(chan *net.TCPConn)
@@ -127,7 +127,7 @@ func main() {
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			panic(err)
+			log.Fatal("error starting listener: ", err)
 		}
 		pending <- conn
 	}
