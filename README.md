@@ -47,6 +47,8 @@ the remote address, it will fail immediately.
 `-ms` - minimum number of samples. Defaults to 5. Fewer samples than
         this in the total window and it won't trip.
 
+`-v` - enable verbose logging. Off by default.
+
 ## Future Plans
 
 * configurable sliding window

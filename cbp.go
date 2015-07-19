@@ -13,6 +13,7 @@ var localAddr = flag.String("l", "localhost:9999", "local address")
 var remoteAddr = flag.String("r", "localhost:80", "remote address")
 var threshold = flag.Float64("t", 0.5, "error threshold for tripping")
 var minSamples = flag.Int64("ms", 5, "minimum samples")
+var verbose = flag.Bool("v", false, "verbose")
 
 func proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 	srvConn, err := net.DialTCP("tcp", nil, rAddr)
@@ -20,7 +21,6 @@ func proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 		cliConn.Close()
 		return err
 	}
-	log.Println("ok")
 	defer srvConn.Close()
 
 	// channels to wait on the close event for each connection
@@ -50,10 +50,14 @@ func broker(dst, src net.Conn, srcClosed chan struct{}) {
 	_, err := io.Copy(dst, src)
 
 	if err != nil {
-		log.Printf("Copy error: %s", err)
+		if *verbose {
+			log.Printf("Copy error: %s", err)
+		}
 	}
 	if err := src.Close(); err != nil {
-		log.Printf("Close error: %s", err)
+		if *verbose {
+			log.Printf("Close error: %s", err)
+		}
 	}
 	srcClosed <- struct{}{}
 }
@@ -74,8 +78,9 @@ func closeConn(in <-chan *net.TCPConn) {
 
 func main() {
 	flag.Parse()
-
-	log.Printf("%v -> %v\n", *localAddr, *remoteAddr)
+	if *verbose {
+		log.Printf("%v -> %v\n", *localAddr, *remoteAddr)
+	}
 
 	addr, err := net.ResolveTCPAddr("tcp", *localAddr)
 	if err != nil {
@@ -89,21 +94,23 @@ func main() {
 	cb := circuit.NewRateBreaker(*threshold, *minSamples)
 	events := cb.Subscribe()
 
-	go func() {
-		for {
-			e := <-events
-			switch e {
-			case circuit.BreakerTripped:
-				log.Println("breaker tripped")
-			case circuit.BreakerReset:
-				log.Println("breaker reset")
-			case circuit.BreakerFail:
-				log.Println("breaker fail")
-			case circuit.BreakerReady:
-				log.Println("breaker ready")
+	if *verbose {
+		go func() {
+			for {
+				e := <-events
+				switch e {
+				case circuit.BreakerTripped:
+					log.Println("breaker tripped")
+				case circuit.BreakerReset:
+					log.Println("breaker reset")
+				case circuit.BreakerFail:
+					log.Println("breaker fail")
+				case circuit.BreakerReady:
+					log.Println("breaker ready")
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
