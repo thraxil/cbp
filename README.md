@@ -49,6 +49,22 @@ the remote address, it will fail immediately.
 
 `-v` - enable verbose logging. Off by default.
 
+`-statsd` - host:port to send statsd data to. Eg, 'localhost:8125'. To
+enable statsd reporting, you must set this, `-metric-base`, and `-metric-name`.
+
+`-metric-base`, `-metric-name` - two parts of the statsd metric base
+name. Eg, if you use `-metric-base sys.production -metric-name x`,
+metrics like the following will be reported to statsd:
+
+```
+stats.counters.sys.production.x.fail.rate 0.000000 1437509113
+stats.counters.sys.production.x.fail.count 0 1437509113
+```
+
+Yes, this is a bit odd. This is a requirement of an underlying
+library. It will take some more work to make it simpler to configure.
+
+
 ## Future Plans
 
 * configurable sliding window

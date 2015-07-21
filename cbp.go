@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/peterbourgon/g2s"
 	"github.com/rubyist/circuitbreaker"
 )
 
@@ -14,6 +15,10 @@ var remoteAddr = flag.String("r", "localhost:80", "remote address")
 var threshold = flag.Float64("t", 0.5, "error threshold for tripping")
 var minSamples = flag.Int64("ms", 5, "minimum samples")
 var verbose = flag.Bool("v", false, "verbose")
+
+var statsdHost = flag.String("statsd", "", "statsd host. eg: localhost8125")
+var metricBase = flag.String("metric-base", "", "statsd metric base")
+var metricName = flag.String("metric-name", "", "statsd metric name")
 
 func proxy(cliConn *net.TCPConn, rAddr *net.TCPAddr) error {
 	srvConn, err := net.DialTCP("tcp", nil, rAddr)
@@ -94,6 +99,17 @@ func main() {
 	cb := circuit.NewRateBreaker(*threshold, *minSamples)
 	events := cb.Subscribe()
 
+	if *statsdHost != "" && *metricBase != "" && *metricName != "" {
+		log.Println("logging to statsd")
+		s, err := g2s.Dial("udp", *statsdHost)
+		if err != nil {
+			log.Fatal(err)
+		}
+		panel := circuit.NewPanel()
+		panel.StatsPrefixf = *metricBase + ".%s"
+		panel.Statter = s
+		panel.Add(*metricName, cb)
+	}
 	if *verbose {
 		go func() {
 			for {
