@@ -35,6 +35,17 @@ into exponential backoff mode. Traffic is blocked for 1 second, turned
 back on for 1 second, if there are more failures, it blocks traffic
 for 2 seconds, 4 seconds, 8 seconds, etc.
 
+## Install
+
+Grab a Linux binary from the releases (64-bit Linux only, I'm afraid),
+or if you have a Go environment set up:
+
+    $ go get github.com/thraxil/cbp
+
+Or clone the repo and do
+
+    $ make install_deps && make
+
 ## Flags
 
 `-l` - [required] local address:port to listen on.
