@@ -58,6 +58,12 @@ the remote address, it will fail immediately.
 `-ms` - minimum number of samples. Defaults to 5. Fewer samples than
         this in the total window and it won't trip.
 
+`-window-time` - size of window (ms). defaults to 1000.
+
+`-window-buckets` - number of buckets to window over. default
+   to 10. So, combined with `-window-time`, the default setting is
+   10 one second buckets.
+
 `-v` - enable verbose logging. Off by default.
 
 `-statsd` - host:port to send statsd data to. Eg, 'localhost:8125'. To

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"github.com/peterbourgon/g2s"
 	"github.com/rubyist/circuitbreaker"
@@ -14,6 +15,8 @@ var localAddr = flag.String("l", "localhost:9999", "local address")
 var remoteAddr = flag.String("r", "localhost:80", "remote address")
 var threshold = flag.Float64("t", 0.5, "error threshold for tripping")
 var minSamples = flag.Int64("ms", 5, "minimum samples")
+var windowTime = flag.Int64("window-time", 10000, "window time (ms)")
+var windowBuckets = flag.Int64("window-buckets", 10, "window Buckets")
 var verbose = flag.Bool("v", false, "verbose")
 
 var statsdHost = flag.String("statsd", "", "statsd host. eg: localhost8125")
@@ -95,8 +98,12 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot resolve remote address: ", err)
 	}
-
-	cb := circuit.NewRateBreaker(*threshold, *minSamples)
+	options := circuit.Options{
+		ShouldTrip:    circuit.RateTripFunc(*threshold, *minSamples),
+		WindowTime:    time.Duration(*windowTime) * time.Millisecond,
+		WindowBuckets: int(*windowBuckets),
+	}
+	cb := circuit.NewBreakerWithOptions(&options)
 	events := cb.Subscribe()
 
 	if *statsdHost != "" && *metricBase != "" && *metricName != "" {
