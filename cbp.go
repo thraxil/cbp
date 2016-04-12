@@ -1,14 +1,16 @@
 package main
 
 import (
+	"expvar"
 	"flag"
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/peterbourgon/g2s"
-	"github.com/rubyist/circuitbreaker"
+	circuit "github.com/rubyist/circuitbreaker"
 )
 
 var localAddr = flag.String("l", "localhost:9999", "local address")
@@ -17,6 +19,7 @@ var threshold = flag.Float64("t", 0.5, "error threshold for tripping")
 var minSamples = flag.Int64("ms", 5, "minimum samples")
 var windowTime = flag.Int64("window-time", 10000, "window time (ms)")
 var windowBuckets = flag.Int64("window-buckets", 10, "window Buckets")
+var expvarAddr = flag.String("e", "localhost:9998", "expvar address")
 var verbose = flag.Bool("v", false, "verbose")
 
 var statsdHost = flag.String("statsd", "", "statsd host. eg: localhost8125")
@@ -84,6 +87,10 @@ func closeConn(in <-chan *net.TCPConn) {
 	}
 }
 
+var state = expvar.NewString("state")
+var eventsCount = expvar.NewInt("events")
+var connectionsCount = expvar.NewInt("connections")
+
 func main() {
 	flag.Parse()
 	if *verbose {
@@ -106,6 +113,8 @@ func main() {
 	cb := circuit.NewBreakerWithOptions(&options)
 	events := cb.Subscribe()
 
+	state.Set("ready")
+
 	if *statsdHost != "" && *metricBase != "" && *metricName != "" {
 		log.Println("logging to statsd")
 		s, err := g2s.Dial("udp", *statsdHost)
@@ -117,23 +126,35 @@ func main() {
 		panel.Statter = s
 		panel.Add(*metricName, cb)
 	}
-	if *verbose {
-		go func() {
-			for {
-				e := <-events
-				switch e {
-				case circuit.BreakerTripped:
+
+	go func() {
+		for {
+			e := <-events
+			eventsCount.Add(1)
+			switch e {
+			case circuit.BreakerTripped:
+				state.Set("tripped")
+				if *verbose {
 					log.Println("breaker tripped")
-				case circuit.BreakerReset:
+				}
+			case circuit.BreakerReset:
+				state.Set("reset")
+				if *verbose {
 					log.Println("breaker reset")
-				case circuit.BreakerFail:
+				}
+			case circuit.BreakerFail:
+				state.Set("fail")
+				if *verbose {
 					log.Println("breaker fail")
-				case circuit.BreakerReady:
+				}
+			case circuit.BreakerReady:
+				state.Set("ready")
+				if *verbose {
 					log.Println("breaker ready")
 				}
 			}
-		}()
-	}
+		}
+	}()
 
 	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
@@ -147,11 +168,17 @@ func main() {
 	}
 	go closeConn(complete)
 
+	go func() {
+		// serve the expvars endpoint
+		http.ListenAndServe(*expvarAddr, nil)
+	}()
+
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
 			log.Fatal("error starting listener: ", err)
 		}
+		connectionsCount.Add(1)
 		pending <- conn
 	}
 }

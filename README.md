@@ -64,6 +64,13 @@ the remote address, it will fail immediately.
    to 10. So, combined with `-window-time`, the default setting is
    10 one second buckets.
 
+`-e` - [expvar](https://golang.org/pkg/expvar/) address/port for
+monitoring. Defaults to `localhost:9998`. In addition to the usual
+memory, etc data that expvar exposes, there will also be `state`
+("ready", "fail", "reset", or "tripped"), `events` (incremented each
+time circuit breaker state changes), and `connections` (total number
+of connections served since starting) variables exposed.
+
 `-v` - enable verbose logging. Off by default.
 
 `-statsd` - host:port to send statsd data to. Eg, 'localhost:8125'. To
